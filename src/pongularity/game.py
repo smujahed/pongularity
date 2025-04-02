@@ -196,15 +196,6 @@ class PongularityGame:
         pygame.draw.rect(self.screen, self.LIGHT_GREY, (0, 0, self.WIDTH, self.GRID))
         pygame.draw.rect(self.screen, self.LIGHT_GREY, (0, self.HEIGHT - self.GRID, self.WIDTH, self.GRID))
         
-        # Draw center line
-        for i in range(self.GRID, self.HEIGHT - self.GRID, self.GRID * 2):
-            pygame.draw.rect(self.screen, self.LIGHT_GREY, (
-                self.WIDTH // 2 - self.GRID // 2, 
-                i, 
-                self.GRID, 
-                self.GRID
-            ))
-        
         # Draw scores
         left_score_text = self.score_font.render(str(self.score["left"]), True, self.WHITE)
         right_score_text = self.score_font.render(str(self.score["right"]), True, self.WHITE)
