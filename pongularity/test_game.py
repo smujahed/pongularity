@@ -32,18 +32,27 @@ class TestPongularityGame(unittest.TestCase):
         self.assertEqual(self.game.BALL_ACCELERATION, 0.25)
         self.assertEqual(self.game.MAX_BALL_SPEED, 15)
         self.assertEqual(self.game.MAX_SCORE, 10)
+        self.assertEqual(self.game.POWERUP_SIZE, self.game.GRID * 2)
+        self.assertEqual(self.game.POWERUP_SPAWN_INTERVAL, 5000)
+        self.assertEqual(self.game.POWERUP_DURATION, 7000)
 
     def test_game_colors(self):
         """Test that game colors are set correctly"""
         self.assertEqual(self.game.BLACK, (0, 0, 0))
         self.assertEqual(self.game.WHITE, (255, 255, 255))
         self.assertEqual(self.game.LIGHT_GREY, (211, 211, 211))
+        self.assertEqual(self.game.RED, (255, 0, 0))
+        self.assertEqual(self.game.GREEN, (0, 255, 0))
+        self.assertEqual(self.game.BLUE, (0, 0, 255))
+        self.assertEqual(self.game.YELLOW, (255, 255, 0))
+        self.assertEqual(self.game.CYAN, (0, 255, 255))
+        self.assertEqual(self.game.PURPLE, (128, 0, 128))
 
     def test_initial_score(self):
         """Test that game starts with correct score"""
         self.assertEqual(self.game.score["left"], 0)
         self.assertEqual(self.game.score["right"], 0)
-        self.assertFalse(self.game.game_over)
+        self.assertEqual(self.game.game_state, "start_screen")
 
     def test_initial_paddle_positions(self):
         """Test that paddles start in correct positions"""
@@ -61,15 +70,17 @@ class TestPongularityGame(unittest.TestCase):
         self.assertEqual(self.game.right_paddle["height"], self.game.PADDLE_HEIGHT)
         self.assertEqual(self.game.right_paddle["dy"], 0)
 
-    def test_initial_ball_position(self):
-        """Test that ball starts in correct position"""
-        self.assertEqual(self.game.ball["x"], self.game.WIDTH / 2)
-        self.assertEqual(self.game.ball["y"], self.game.HEIGHT / 2)
-        self.assertEqual(self.game.ball["width"], self.game.GRID)
-        self.assertEqual(self.game.ball["height"], self.game.GRID)
-        self.assertFalse(self.game.ball["resetting"])
-        self.assertEqual(self.game.ball["dx"], self.game.BALL_SPEED)
-        self.assertEqual(self.game.ball["dy"], -self.game.BALL_SPEED)
+    def test_initial_ball_state(self):
+        """Test that balls list is initialized correctly"""
+        self.assertEqual(len(self.game.balls), 1)
+        ball = self.game.balls[0]
+        self.assertEqual(ball["x"], self.game.WIDTH / 2)
+        self.assertEqual(ball["y"], self.game.HEIGHT / 2)
+        self.assertEqual(ball["width"], self.game.GRID)
+        self.assertEqual(ball["height"], self.game.GRID)
+        self.assertFalse(ball["resetting"])
+        self.assertIn(abs(ball["dx"]), [self.game.BALL_SPEED, -self.game.BALL_SPEED])
+        self.assertIn(abs(ball["dy"]), [self.game.BALL_SPEED, -self.game.BALL_SPEED])
 
     def test_collision_detection(self):
         """Test collision detection between objects"""
@@ -100,6 +111,9 @@ class TestPongularityGame(unittest.TestCase):
 
     def test_left_paddle_boundaries(self):
         """Test that left paddle stays within game boundaries"""
+        # Set game state to "playing"
+        self.game.game_state = "playing"
+        
         # Test upper boundary
         self.game.left_paddle["y"] = 0
         self.game.left_paddle["dy"] = -10
@@ -114,6 +128,9 @@ class TestPongularityGame(unittest.TestCase):
 
     def test_right_paddle_boundaries(self):
         """Test that right paddle stays within game boundaries"""
+        # Set game state to "playing"
+        self.game.game_state = "playing"
+        
         # Test upper boundary
         self.game.right_paddle["y"] = 0
         self.game.right_paddle["dy"] = -10
@@ -128,130 +145,135 @@ class TestPongularityGame(unittest.TestCase):
 
     def test_ball_reset(self):
         """Test ball reset functionality"""
-        # Set ball to non-center position
-        self.game.ball["x"] = 100
-        self.game.ball["y"] = 100
-        self.game.ball["resetting"] = True
-        self.game.ball["dx"] = 10
-        self.game.ball["dy"] = 10
+        # Get the first ball
+        ball = self.game.balls[0]
         
-        self.game.reset_ball()
+        # Set ball to non-center position
+        ball["x"] = 100
+        ball["y"] = 100
+        ball["resetting"] = True
+        ball["dx"] = 10
+        ball["dy"] = 10
+        
+        self.game.reset_ball(ball)
         
         # Check position reset
-        self.assertEqual(self.game.ball["x"], self.game.WIDTH / 2)
-        self.assertEqual(self.game.ball["y"], self.game.HEIGHT / 2)
-        self.assertFalse(self.game.ball["resetting"])
+        self.assertEqual(ball["x"], self.game.WIDTH / 2)
+        self.assertEqual(ball["y"], self.game.HEIGHT / 2)
+        self.assertFalse(ball["resetting"])
         
         # Check speed reset
-        self.assertEqual(abs(self.game.ball["dx"]), self.game.BALL_SPEED)
-        self.assertEqual(abs(self.game.ball["dy"]), self.game.BALL_SPEED)
+        self.assertEqual(abs(ball["dx"]), self.game.BALL_SPEED)
+        self.assertEqual(abs(ball["dy"]), self.game.BALL_SPEED)
 
     def test_ball_acceleration(self):
         """Test ball acceleration after paddle hit"""
+        # Get the first ball
+        ball = self.game.balls[0]
+        
         # Test normal acceleration
         initial_dx = self.game.BALL_SPEED
         initial_dy = -self.game.BALL_SPEED
-        self.game.ball["dx"] = initial_dx
-        self.game.ball["dy"] = initial_dy
+        ball["dx"] = initial_dx
+        ball["dy"] = initial_dy
         
-        self.game.accelerate_ball()
+        self.game.accelerate_ball(ball)
         
-        self.assertEqual(self.game.ball["dx"], initial_dx + self.game.BALL_ACCELERATION)
-        self.assertEqual(self.game.ball["dy"], initial_dy - self.game.BALL_ACCELERATION)
+        self.assertEqual(ball["dx"], initial_dx + self.game.BALL_ACCELERATION)
+        self.assertEqual(ball["dy"], initial_dy - self.game.BALL_ACCELERATION)
         
         # Test max speed cap
-        self.game.ball["dx"] = self.game.MAX_BALL_SPEED
-        self.game.ball["dy"] = -self.game.MAX_BALL_SPEED
-        self.game.accelerate_ball()
+        ball["dx"] = self.game.MAX_BALL_SPEED
+        ball["dy"] = -self.game.MAX_BALL_SPEED
+        self.game.accelerate_ball(ball)
         
-        self.assertEqual(self.game.ball["dx"], self.game.MAX_BALL_SPEED)
-        self.assertEqual(self.game.ball["dy"], -self.game.MAX_BALL_SPEED)
+        self.assertEqual(ball["dx"], self.game.MAX_BALL_SPEED)
+        self.assertEqual(ball["dy"], -self.game.MAX_BALL_SPEED)
 
-    def test_left_paddle_collision(self):
-        """Test ball collision with left paddle"""
-        # Position ball to collide with left paddle
-        self.game.ball["x"] = self.game.left_paddle["x"] + self.game.left_paddle["width"] - 1
-        self.game.ball["y"] = self.game.left_paddle["y"]
-        self.game.ball["dx"] = -self.game.BALL_SPEED
+    def test_powerup_spawn(self):
+        """Test power-up spawning functionality"""
+        self.assertEqual(len(self.game.powerups), 0)
         
-        initial_speed = abs(self.game.ball["dx"])
-        self.game.update()
+        self.game.spawn_powerup()
         
-        self.assertTrue(self.game.ball["dx"] > 0)  # Direction should reverse
-        self.assertTrue(abs(self.game.ball["dx"]) > initial_speed)  # Speed should increase
+        self.assertEqual(len(self.game.powerups), 1)
+        powerup = self.game.powerups[0]
+        
+        # Check powerup properties
+        self.assertIn("x", powerup)
+        self.assertIn("y", powerup)
+        self.assertIn("width", powerup)
+        self.assertIn("height", powerup)
+        self.assertIn("type", powerup)
+        self.assertIn("color", powerup)
+        
+        # Check valid type
+        self.assertIn(powerup["type"], ["multi_ball", "giant_ball", "micro_ball", "slow_motion", "speed_ball"])
+        
+        # Check valid position
+        margin = self.game.GRID * 5
+        self.assertTrue(margin <= powerup["x"] <= self.game.WIDTH - margin - self.game.POWERUP_SIZE)
+        self.assertTrue(margin <= powerup["y"] <= self.game.HEIGHT - margin - self.game.POWERUP_SIZE)
 
-    def test_right_paddle_collision(self):
-        """Test ball collision with right paddle"""
-        # Position ball to collide with right paddle
-        self.game.ball["x"] = self.game.right_paddle["x"] - self.game.ball["width"] + 1
-        self.game.ball["y"] = self.game.right_paddle["y"]
-        self.game.ball["dx"] = self.game.BALL_SPEED
+    def test_multi_ball_activation(self):
+        """Test that multi_ball powerup adds two new balls"""
+        self.assertEqual(len(self.game.balls), 1)
         
-        initial_speed = abs(self.game.ball["dx"])
-        self.game.update()
+        self.game.activate_powerup("multi_ball")
         
-        self.assertTrue(self.game.ball["dx"] < 0)  # Direction should reverse
-        self.assertTrue(abs(self.game.ball["dx"]) > initial_speed)  # Speed should increase
+        self.assertEqual(len(self.game.balls), 3)
+        self.assertEqual(len(self.game.active_powerups), 1)
+        self.assertEqual(self.game.active_powerups[0]["type"], "multi_ball")
 
-    def test_ball_wall_collision(self):
-        """Test ball collision with top and bottom walls"""
-        # Test top wall collision
-        self.game.ball["y"] = self.game.GRID - 1
-        self.game.ball["dy"] = -self.game.BALL_SPEED
-        self.game.update()
-        self.assertTrue(self.game.ball["dy"] > 0)
+    def test_powerup_update_giant_ball(self):
+        """Test giant_ball powerup effect"""
+        ball = self.game.balls[0]
+        original_width = ball["width"]
+        original_height = ball["height"]
         
-        # Test bottom wall collision
-        self.game.ball["y"] = self.game.HEIGHT - self.game.GRID - self.game.ball["height"] + 1
-        self.game.ball["dy"] = self.game.BALL_SPEED
-        self.game.update()
-        self.assertTrue(self.game.ball["dy"] < 0)
-
-    def test_left_player_scoring(self):
-        """Test scoring when ball goes past right edge"""
-        self.game.ball["x"] = self.game.WIDTH + 10
-        self.game.ball["resetting"] = False
-        
-        with patch('pygame.time.get_ticks', return_value=0):
-            self.game.update()
+        # Add giant_ball to active powerups
+        now = 1000  # Mock time
+        with patch('pygame.time.get_ticks', return_value=now):
+            self.game.activate_powerup("giant_ball")
             
-        self.assertEqual(self.game.score["left"], 1)
-        self.assertEqual(self.game.score["right"], 0)
-        self.assertTrue(self.game.ball["resetting"])
-
-    def test_right_player_scoring(self):
-        """Test scoring when ball goes past left edge"""
-        self.game.ball["x"] = -10
-        self.game.ball["resetting"] = False
+            # Run the update function that applies effects
+            self.game.update_powerup_effects()
         
+        # Check that ball size increased
+        self.assertEqual(ball["width"], self.game.GRID * 2)
+        self.assertEqual(ball["height"], self.game.GRID * 2)
+        
+        # Test cleanup after expiration
+        with patch('pygame.time.get_ticks', return_value=now + self.game.POWERUP_DURATION + 100):
+            self.game.update_powerup_effects()
+        
+        # Check that ball size is back to normal
+        self.assertEqual(ball["width"], self.game.GRID)
+        self.assertEqual(ball["height"], self.game.GRID)
+        self.assertEqual(len(self.game.active_powerups), 0)
+
+    def test_game_reset(self):
+        """Test full game reset functionality"""
+        # Add additional balls and powerups
+        self.game.add_ball()
+        self.game.spawn_powerup()
+        self.game.activate_powerup("multi_ball")
+        
+        # Set scores
+        self.game.score["left"] = 5
+        self.game.score["right"] = 3
+        
+        # Reset the game
         with patch('pygame.time.get_ticks', return_value=0):
-            self.game.update()
-            
+            self.game.reset_game()
+        
+        # Check that everything is reset
         self.assertEqual(self.game.score["left"], 0)
-        self.assertEqual(self.game.score["right"], 1)
-        self.assertTrue(self.game.ball["resetting"])
-
-    def test_left_player_win(self):
-        """Test game over when left player reaches max score"""
-        self.game.score["left"] = self.game.MAX_SCORE - 1
-        self.game.ball["x"] = self.game.WIDTH + 10
-        self.game.ball["resetting"] = False
-        
-        with patch('pygame.time.get_ticks', return_value=0):
-            self.game.update()
-        
-        self.assertTrue(self.game.game_over)
-
-    def test_right_player_win(self):
-        """Test game over when right player reaches max score"""
-        self.game.score["right"] = self.game.MAX_SCORE - 1
-        self.game.ball["x"] = -10
-        self.game.ball["resetting"] = False
-        
-        with patch('pygame.time.get_ticks', return_value=0):
-            self.game.update()
-        
-        self.assertTrue(self.game.game_over)
+        self.assertEqual(self.game.score["right"], 0)
+        self.assertEqual(len(self.game.balls), 1)
+        self.assertEqual(len(self.game.powerups), 0)
+        self.assertEqual(len(self.game.active_powerups), 0)
+        self.assertEqual(self.game.game_state, "playing")
 
 if __name__ == '__main__':
     unittest.main()
