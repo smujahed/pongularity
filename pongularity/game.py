@@ -25,6 +25,9 @@ class PongularityGame:
         self.WHITE = (255, 255, 255)
         self.LIGHT_GREY = (211, 211, 211)
         
+        # Game state
+        self.game_state = "start_screen"  # Can be "start_screen", "playing", or "game_over"
+        
         # Game objects
         self.left_paddle = {
             "x": self.GRID * 2,
@@ -57,7 +60,6 @@ class PongularityGame:
             "right": 0
         }
         
-        self.game_over = False
         self.reset_timer = 0
         
         # Set up display
@@ -69,6 +71,8 @@ class PongularityGame:
         self.score_font = pygame.font.SysFont('Arial', 32)
         self.game_over_font = pygame.font.SysFont('Arial', 60)
         self.winner_font = pygame.font.SysFont('Arial', 30)
+        self.title_font = pygame.font.SysFont('Arial', 72)
+        self.instruction_font = pygame.font.SysFont('Arial', 20)
     
     def collides(self, obj1, obj2):
         """Check collision between two rectangular objects."""
@@ -88,9 +92,18 @@ class PongularityGame:
         self.ball["dx"] = self.BALL_SPEED * speed_sign_x
         self.ball["dy"] = self.BALL_SPEED * speed_sign_y
     
+    def reset_game(self):
+        """Reset the entire game state."""
+        self.score["left"] = 0
+        self.score["right"] = 0
+        self.left_paddle["y"] = self.HEIGHT / 2 - self.PADDLE_HEIGHT / 2
+        self.right_paddle["y"] = self.HEIGHT / 2 - self.PADDLE_HEIGHT / 2
+        self.reset_ball()
+        self.game_state = "playing"
+    
     def update(self):
         """Update game state for one frame."""
-        if not self.game_over:
+        if self.game_state == "playing":
             # Update paddle positions
             self.left_paddle["y"] += self.left_paddle["dy"]
             self.right_paddle["y"] += self.right_paddle["dy"]
@@ -130,7 +143,7 @@ class PongularityGame:
                     self.score["left"] += 1
                 
                 if self.score["left"] >= self.MAX_SCORE or self.score["right"] >= self.MAX_SCORE:
-                    self.game_over = True
+                    self.game_state = "game_over"
             
             # Reset ball after delay
             if self.ball["resetting"] and pygame.time.get_ticks() - self.reset_timer >= 400:
@@ -164,56 +177,103 @@ class PongularityGame:
         self.ball["dx"] = dx_abs * dx_sign
         self.ball["dy"] = dy_abs * dy_sign
     
+    def render_start_screen(self):
+        """Render the start screen."""
+        # Title
+        title_text = self.title_font.render("PONGULARITY", True, self.WHITE)
+        self.screen.blit(title_text, (self.WIDTH // 2 - title_text.get_width() // 2, self.HEIGHT // 4))
+        
+        # Centered instructions
+        centered_instructions = [
+            "Press SPACE to start",
+            "First to 10 points wins!"
+        ]
+        
+        y_offset = self.HEIGHT // 2
+        for instruction in centered_instructions:
+            instruction_text = self.instruction_font.render(instruction, True, self.LIGHT_GREY)
+            self.screen.blit(instruction_text, (self.WIDTH // 2 - instruction_text.get_width() // 2, y_offset))
+            y_offset += 35
+        
+        # Left paddle controls (left side)
+        left_header = self.instruction_font.render("Left Controls", True, self.WHITE)
+        self.screen.blit(left_header, (self.WIDTH // 4 - left_header.get_width() // 2, y_offset))
+        
+        left_up = self.instruction_font.render("W (up)", True, self.LIGHT_GREY)
+        self.screen.blit(left_up, (self.WIDTH // 4 - left_up.get_width() // 2, y_offset + 35))
+        
+        left_down = self.instruction_font.render("S (down)", True, self.LIGHT_GREY)
+        self.screen.blit(left_down, (self.WIDTH // 4 - left_down.get_width() // 2, y_offset + 70))
+        
+        # Right paddle controls (right side)
+        right_header = self.instruction_font.render("Right Controls", True, self.WHITE)
+        self.screen.blit(right_header, (3 * self.WIDTH // 4 - right_header.get_width() // 2, y_offset))
+        
+        right_up = self.instruction_font.render("Up Arrow (up)", True, self.LIGHT_GREY)
+        self.screen.blit(right_up, (3 * self.WIDTH // 4 - right_up.get_width() // 2, y_offset + 35))
+        
+        right_down = self.instruction_font.render("Down Arrow (down)", True, self.LIGHT_GREY)
+        self.screen.blit(right_down, (3 * self.WIDTH // 4 - right_down.get_width() // 2, y_offset + 70))
+    
+    def render_game_over(self):
+        """Render the game over screen."""
+        game_over_text = self.game_over_font.render("GAME OVER", True, self.WHITE)
+        
+        winner = "LEFT" if self.score["left"] >= self.MAX_SCORE else "RIGHT"
+        winner_text = self.winner_font.render(f"{winner} PLAYER WINS!", True, self.WHITE)
+        
+        restart_text = self.instruction_font.render("Press SPACE to play again", True, self.WHITE)
+        
+        self.screen.blit(game_over_text, (self.WIDTH // 2 - game_over_text.get_width() // 2, 
+                                         self.HEIGHT // 2 - game_over_text.get_height() // 2 - 50))
+        self.screen.blit(winner_text, (self.WIDTH // 2 - winner_text.get_width() // 2, 
+                                      self.HEIGHT // 2))
+        self.screen.blit(restart_text, (self.WIDTH // 2 - restart_text.get_width() // 2, 
+                                      self.HEIGHT // 2 + 80))
+    
     def render(self):
         """Draw the game state to the screen."""
         # Clear screen
         self.screen.fill(self.BLACK)
         
-        # Draw paddles
-        pygame.draw.rect(self.screen, self.WHITE, (
-            self.left_paddle["x"], 
-            self.left_paddle["y"], 
-            self.left_paddle["width"], 
-            self.left_paddle["height"]
-        ))
-        
-        pygame.draw.rect(self.screen, self.WHITE, (
-            self.right_paddle["x"], 
-            self.right_paddle["y"], 
-            self.right_paddle["width"], 
-            self.right_paddle["height"]
-        ))
-        
-        # Draw ball
-        pygame.draw.rect(self.screen, self.WHITE, (
-            self.ball["x"], 
-            self.ball["y"], 
-            self.ball["width"], 
-            self.ball["height"]
-        ))
-        
-        # Draw top and bottom borders
-        pygame.draw.rect(self.screen, self.LIGHT_GREY, (0, 0, self.WIDTH, self.GRID))
-        pygame.draw.rect(self.screen, self.LIGHT_GREY, (0, self.HEIGHT - self.GRID, self.WIDTH, self.GRID))
-        
-        # Draw scores
-        left_score_text = self.score_font.render(str(self.score["left"]), True, self.WHITE)
-        right_score_text = self.score_font.render(str(self.score["right"]), True, self.WHITE)
-        
-        self.screen.blit(left_score_text, (self.WIDTH // 4, self.GRID * 4))
-        self.screen.blit(right_score_text, (3 * self.WIDTH // 4, self.GRID * 4))
-        
-        # Draw game over message
-        if self.game_over:
-            game_over_text = self.game_over_font.render("GAME OVER", True, self.WHITE)
+        if self.game_state == "start_screen":
+            self.render_start_screen()
+        elif self.game_state == "playing":
+            # Draw paddles
+            pygame.draw.rect(self.screen, self.WHITE, (
+                self.left_paddle["x"], 
+                self.left_paddle["y"], 
+                self.left_paddle["width"], 
+                self.left_paddle["height"]
+            ))
             
-            winner = "LEFT" if self.score["left"] >= self.MAX_SCORE else "RIGHT"
-            winner_text = self.winner_font.render(f"{winner} PLAYER WINS!", True, self.WHITE)
+            pygame.draw.rect(self.screen, self.WHITE, (
+                self.right_paddle["x"], 
+                self.right_paddle["y"], 
+                self.right_paddle["width"], 
+                self.right_paddle["height"]
+            ))
             
-            self.screen.blit(game_over_text, (self.WIDTH // 2 - game_over_text.get_width() // 2, 
-                                             self.HEIGHT // 2 - game_over_text.get_height() // 2))
-            self.screen.blit(winner_text, (self.WIDTH // 2 - winner_text.get_width() // 2, 
-                                          self.HEIGHT // 2 + 50))
+            # Draw ball
+            pygame.draw.rect(self.screen, self.WHITE, (
+                self.ball["x"], 
+                self.ball["y"], 
+                self.ball["width"], 
+                self.ball["height"]
+            ))
+            
+            # Draw top and bottom borders
+            pygame.draw.rect(self.screen, self.LIGHT_GREY, (0, 0, self.WIDTH, self.GRID))
+            pygame.draw.rect(self.screen, self.LIGHT_GREY, (0, self.HEIGHT - self.GRID, self.WIDTH, self.GRID))
+            
+            # Draw scores
+            left_score_text = self.score_font.render(str(self.score["left"]), True, self.WHITE)
+            right_score_text = self.score_font.render(str(self.score["right"]), True, self.WHITE)
+            
+            self.screen.blit(left_score_text, (self.WIDTH // 4, self.GRID * 4))
+            self.screen.blit(right_score_text, (3 * self.WIDTH // 4, self.GRID * 4))
+        elif self.game_state == "game_over":
+            self.render_game_over()
         
         # Update display
         pygame.display.flip()
@@ -223,8 +283,13 @@ class PongularityGame:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return False
+            
+            # Check for space bar press on start screen or game over screen
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                if self.game_state == "start_screen" or self.game_state == "game_over":
+                    self.reset_game()
         
-        if not self.game_over:
+        if self.game_state == "playing":
             # Get the current state of all keys
             keys = pygame.key.get_pressed()
             
