@@ -31,9 +31,9 @@ pip install -e .
 pongularity
 ```
 
-2. Or run directly from the source:
+2. Or run directly using the module:
 ```
-python -m src.pongularity
+python -m pongularity
 ```
 
 ## Controls
