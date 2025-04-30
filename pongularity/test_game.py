@@ -30,7 +30,7 @@ class TestPongularityGame(unittest.TestCase):
         self.assertEqual(self.game.PADDLE_SPEED, 6)
         self.assertEqual(self.game.BALL_SPEED, 5)
         self.assertEqual(self.game.BALL_ACCELERATION, 0.25)
-        self.assertEqual(self.game.MAX_BALL_SPEED, 15)
+        self.assertEqual(self.game.MAX_BALL_SPEED, 10)
         self.assertEqual(self.game.MAX_SCORE, 10)
         self.assertEqual(self.game.POWERUP_SIZE, self.game.GRID * 2)
         self.assertEqual(self.game.POWERUP_SPAWN_INTERVAL, 5000)

@@ -19,7 +19,7 @@ class PongularityGame:
         self.PADDLE_SPEED = 6
         self.BALL_SPEED = 5
         self.BALL_ACCELERATION = 0.25
-        self.MAX_BALL_SPEED = 15
+        self.MAX_BALL_SPEED = 10
         self.MAX_SCORE = 10
         self.POWERUP_SIZE = self.GRID * 2
         self.POWERUP_SPAWN_INTERVAL = 5000  # ms
